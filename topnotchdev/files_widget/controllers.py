@@ -1,5 +1,5 @@
 import re
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import os, os.path
 from datetime import datetime
 
@@ -13,10 +13,10 @@ from django.contrib.staticfiles import finders
 
 from sorl.thumbnail import get_thumbnail
 
-from conf import *
+from .conf import *
 
 
-class FilePath(unicode):
+class FilePath(str):
     def __new__(cls, str, instance=None, field=None, settings={}):
         self = super(FilePath, cls).__new__(cls, str.strip())
         self._instance = instance
@@ -45,11 +45,11 @@ class FilePath(unicode):
 
     @property
     def unescaped(self):
-        return urllib.unquote(self)
+        return urllib.parse.unquote(self)
 
     @property
     def escaped(self):
-        return urllib.quote(self.unescaped)
+        return urllib.parse.quote(self.unescaped)
 
     @property
     def url(self):
@@ -60,7 +60,7 @@ class FilePath(unicode):
     @property
     def local_path(self):
         if not self.startswith('/') and self.find('//') == -1:
-            return os.path.join(MEDIA_ROOT, urllib.unquote(self))
+            return os.path.join(MEDIA_ROOT, urllib.parse.unquote(self))
         return self
 
     def _get_local_path_or_file(self):
@@ -77,13 +77,13 @@ class FilePath(unicode):
         else:
             return self.local_path
 
-        path = finders.find(urllib.unquote(path))
+        path = finders.find(urllib.parse.unquote(path))
         image = ImageFile(open(path, 'r'))
         return image
 
     @property
     def filename(self):
-        return urllib.unquote(re.sub(r'^.+\/', '', self))
+        return urllib.parse.unquote(re.sub(r'^.+\/', '', self))
 
     @property
     def display_name(self):
@@ -128,10 +128,10 @@ class ImagePath(FilePath):
         attrs.update(kwargs)
         attrs = self._html_attrs(**attrs)
         attrs_str = ''.join([
-            u'%s="%s" ' % (key, value)
-            for key, value in attrs.items()
+            '%s="%s" ' % (key, value)
+            for key, value in list(attrs.items())
         ])
-        return mark_safe(u'<img src="%s" %s/>' % (self.url, attrs_str))
+        return mark_safe('<img src="%s" %s/>' % (self.url, attrs_str))
 
     def _thumbnail_file_format(self):
         if self.ext.lower() in ['gif', 'png']:
@@ -187,7 +187,7 @@ class ImagePath(FilePath):
         raise AttributeError
 
 
-class FilePaths(unicode):
+class FilePaths(str):
     item_class = FilePath
 
     def __new__(cls, str, instance=None, field=None, settings={}):
@@ -225,7 +225,7 @@ class FilePaths(unicode):
     def last(self):
         return self.all() and self.all()[-1] or None
 
-    def next(self):
+    def __next__(self):
         f = self.all()[self._current]
         self._current += 1
         return f
